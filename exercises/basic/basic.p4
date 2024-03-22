@@ -1,5 +1,5 @@
 /* -*- P4_16 -*- */
-#include <core.p4>
+#include <core.p4>      // p4コアライブラリ
 #include <v1model.p4>
 
 const bit<16> TYPE_IPV4 = 0x800;
@@ -9,28 +9,30 @@ const bit<16> TYPE_IPV4 = 0x800;
 *************************************************************************/
 
 typedef bit<9>  egressSpec_t;
-typedef bit<48> macAddr_t;
-typedef bit<32> ip4Addr_t;
+typedef bit<48> macAddr_t;      // MACアドレスを定義
+typedef bit<32> ip4Addr_t;      // IPv4アドレスを定義
 
+// Ethernetのヘッダー
 header ethernet_t {
-    macAddr_t dstAddr;
-    macAddr_t srcAddr;
-    bit<16>   etherType;
+    macAddr_t dstAddr;      // 宛先MACアドレス
+    macAddr_t srcAddr;      // 送信元MACアドレス
+    bit<16>   etherType;    // ？
 }
 
+// IPv4のヘッダー
 header ipv4_t {
-    bit<4>    version;
-    bit<4>    ihl;
-    bit<8>    diffserv;
-    bit<16>   totalLen;
-    bit<16>   identification;
-    bit<3>    flags;
-    bit<13>   fragOffset;
-    bit<8>    ttl;
-    bit<8>    protocol;
-    bit<16>   hdrChecksum;
-    ip4Addr_t srcAddr;
-    ip4Addr_t dstAddr;
+    bit<4>    version;          // IPのバージョン
+    bit<4>    ihl;              // IPパケットのヘッダ長
+    bit<8>    diffserv;         // 
+    bit<16>   totalLen;         // パケット長
+    bit<16>   identification;   // 識別子(フラグメントオフセット？)
+    bit<3>    flags;            // フラグ
+    bit<13>   fragOffset;       // オフセット
+    bit<8>    ttl;              // Time to Live
+    bit<8>    protocol;         // プロトコル番号
+    bit<16>   hdrChecksum;      // ヘッダーチェックサム
+    ip4Addr_t srcAddr;          // 送信元IPアドレス
+    ip4Addr_t dstAddr;          // 宛先IPアドレス
 }
 
 struct metadata {
@@ -52,7 +54,22 @@ parser MyParser(packet_in packet,
                 inout standard_metadata_t standard_metadata) {
 
     state start {
-        /* TODO: add parser logic */
+        // 実装してみよう
+        transition parse_ethernet;
+    }
+
+    // 実装してみよう
+    state parse_ethernet {
+        packet.extract(hdr.ethernet);
+        transition select(hdr.ethernet.etherType) {
+            TYPE_IPV4: parse_ipv4;
+            default: accept;
+        }
+    }
+
+    // 実装してみよう
+    state parse_ipv4 {
+        packet.extract(hdr.ipv4);
         transition accept;
     }
 }
@@ -79,7 +96,11 @@ control MyIngress(inout headers hdr,
     }
 
     action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
-        /* TODO: fill out code in action body */
+        // 実装してみよう
+        standard_metadata.egress_spec = port;
+        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+        hdr.ethernet.dstAddr = dstAddr;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
     table ipv4_lpm {
@@ -96,10 +117,10 @@ control MyIngress(inout headers hdr,
     }
 
     apply {
-        /* TODO: fix ingress control logic
-         *  - ipv4_lpm should be applied only when IPv4 header is valid
-         */
-        ipv4_lpm.apply();
+        // 実装してみよう
+        if (hdr.ipv4.isValid()) {
+            ipv4_lpm.apply();
+        }
     }
 }
 
@@ -144,7 +165,9 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
 
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
-        /* TODO: add deparser logic */
+        // 実装してみよう(デパーサー)
+        packet.emit(hdr.ethernet);
+        packet.emit(hdr.ipv4);
     }
 }
 
